@@ -11,6 +11,7 @@ import {
   closestCorners,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -160,12 +161,13 @@ function DraggableTaskCard({ task, onEdit, onDelete, projects, tags }: {
           : ''
       }`}
     >
-      <div className="flex gap-3">
-        {/* Drag Handle */}
+      <div className="flex gap-2 sm:gap-3">
+        {/* Drag Handle - always visible on mobile for touch */}
         <button
           {...attributes}
           {...listeners}
-          className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing transition-all"
+          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing transition-all p-1 -ml-1 touch-manipulation"
+          style={{ touchAction: 'none' }}
         >
           <Icons.Grip />
         </button>
@@ -276,7 +278,7 @@ function DroppableColumn({ id, title, icon, count, children, isOver }: {
   return (
     <div
       ref={setNodeRef}
-      className={`kanban-column flex-1 min-w-[340px] max-w-[520px] ${isOver ? 'drop-active' : ''}`}
+      className={`kanban-column flex-1 min-w-0 sm:min-w-[300px] lg:min-w-[340px] max-w-full sm:max-w-[520px] ${isOver ? 'drop-active' : ''}`}
     >
       <div className="flex items-center gap-3 mb-5">
         <div className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-transform duration-200 hover:scale-105 ${
@@ -356,9 +358,10 @@ function App() {
   const pendingTasks = useMemo(() => filteredTasks.filter((t) => t.status === 'pending'), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.status === 'completed'), [filteredTasks]);
 
-  // Drag and drop sensors
+  // Drag and drop sensors - includes touch for mobile
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -558,14 +561,14 @@ function App() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-white/20">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between gap-3 sm:gap-6">
             <div className="flex items-center">
-              <img src="/Logo.avif" alt="Logo" className="h-11 w-auto object-contain logo-float" />
+              <img src="/Logo.avif" alt="Logo" className="h-9 sm:h-11 w-auto object-contain logo-float" />
             </div>
 
             {/* Search */}
-            <div className="flex-1 max-w-md">
+            <div className="flex-1 max-w-md hidden sm:block">
               <div className="relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-primary-500">
                   <Icons.Search />
@@ -593,10 +596,26 @@ function App() {
               </button>
             </div>
           </div>
+          
+          {/* Mobile Search */}
+          <div className="sm:hidden mt-3">
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-primary-500">
+                <Icons.Search />
+              </div>
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input pl-12 py-2.5 text-sm w-full"
+              />
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {/* Quick Stats */}
         {(todayCount > 0 || overdueCount > 0) && (
           <div className="flex gap-3 mb-6 overflow-x-auto pb-2 animate-fade-in">
@@ -621,7 +640,7 @@ function App() {
           </div>
         )}
 
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           {/* Sidebar */}
           <aside className="hidden lg:block w-60 flex-shrink-0 space-y-4">
             {/* Filters */}
@@ -738,7 +757,7 @@ function App() {
           </aside>
 
           {/* Kanban Columns */}
-          <div className="flex-1 flex gap-6 overflow-x-auto pb-4">
+          <div className="flex-1 flex flex-col sm:flex-row gap-4 sm:gap-6 overflow-x-auto pb-4">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCorners}

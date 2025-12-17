@@ -976,3 +976,84 @@ img, video {
   margin-left: 2px;
   color: #FF6B45;
 }
+
+/* ========== MOBILE RESPONSIVE ========== */
+
+/* Touch-friendly utilities */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 640px) {
+  /* Larger touch targets */
+  .btn {
+    @apply py-3;
+    min-height: 44px;
+  }
+  
+  .input {
+    @apply py-3;
+    min-height: 44px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+  
+  /* Task cards - more touch friendly */
+  .stagger-item {
+    @apply p-3;
+  }
+  
+  /* Kanban columns stack on mobile */
+  .kanban-column {
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Modal adjustments for mobile */
+  .modal-content {
+    @apply max-h-[90vh] mx-2;
+    width: calc(100% - 1rem);
+    border-radius: 1.5rem;
+  }
+  
+  /* Improve scrolling on mobile */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Tag touch targets */
+  .tag {
+    @apply px-3 py-1.5;
+    min-height: 32px;
+  }
+  
+  /* Cards slightly less rounded on mobile */
+  .card {
+    @apply rounded-2xl;
+  }
+  
+  /* Sidebar item touch target */
+  .sidebar-item {
+    @apply py-3;
+    min-height: 44px;
+  }
+}
+
+/* Prevent text selection during drag on mobile */
+.dragging {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Improve drag visual feedback on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .group:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+  
+  /* Always show drag handle on touch devices */
+  .group .opacity-0 {
+    opacity: 1 !important;
+  }
+}
