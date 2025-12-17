@@ -77,6 +77,16 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+  Filter: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+    </svg>
+  ),
+  ChevronDown: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  ),
   Close: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -316,6 +326,7 @@ function App() {
   const [initialized, setInitialized] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [overColumn, setOverColumn] = useState<string | null>(null);
@@ -584,6 +595,13 @@ function App() {
             </div>
 
             <div className="flex items-center gap-1.5">
+              {/* Mobile Filter Toggle */}
+              <button 
+                onClick={() => setShowMobileFilters(!showMobileFilters)} 
+                className="lg:hidden p-2.5 hover:bg-gray-100/80 rounded-xl transition-all duration-200 text-gray-500 hover:text-gray-700 hover:scale-105 active:scale-95"
+              >
+                <Icons.Filter />
+              </button>
               <button 
                 onClick={() => setShowSettingsModal(true)} 
                 className="p-2.5 hover:bg-gray-100/80 rounded-xl transition-all duration-200 text-gray-500 hover:text-gray-700 hover:scale-105 active:scale-95"
@@ -636,6 +654,103 @@ function App() {
                 <span className="text-sm font-semibold">{overdueCount}</span>
                 <span className="text-sm text-rose-600/80">overdue</span>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Mobile Filters Panel */}
+        {showMobileFilters && (
+          <div className="lg:hidden mb-4 card p-4 animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-800">Filters</h3>
+              <button 
+                onClick={() => setShowMobileFilters(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Icons.Close />
+              </button>
+            </div>
+            
+            {/* Priority Pills */}
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Priority</p>
+              <div className="flex flex-wrap gap-2">
+                {['high', 'medium', 'low'].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPriority(priority === p ? null : (p as Priority))}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      priority === p 
+                        ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-400' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${
+                      p === 'high' ? 'bg-rose-500' : p === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`} />
+                    <span className="capitalize">{p}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Projects Pills */}
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Projects</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setProjectId(null)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    !projectId 
+                      ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-400' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  All
+                </button>
+                {projects.map((project) => (
+                  <button
+                    key={project.id}
+                    onClick={() => setProjectId(project.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      projectId === project.id 
+                        ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-400' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} />
+                    {project.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tags Pills */}
+            {tags.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tags</p>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <button
+                      key={tag.id}
+                      onClick={() => toggleTagId(tag.id)}
+                      className={`tag text-xs transition-all ${tagIds.includes(tag.id) ? 'ring-2 ring-offset-1 ring-primary-400' : ''}`}
+                      style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(priority || projectId || tagIds.length > 0) && (
+              <button 
+                onClick={resetFilters} 
+                className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700 transition-colors py-2 border border-gray-200 rounded-xl hover:bg-gray-50"
+              >
+                Clear all filters
+              </button>
             )}
           </div>
         )}
