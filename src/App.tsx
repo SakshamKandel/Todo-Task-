@@ -709,39 +709,64 @@ function App() {
                   All
                 </button>
                 {projects.map((project) => (
-                  <button
-                    key={project.id}
-                    onClick={() => setProjectId(project.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                      projectId === project.id 
-                        ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-400' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} />
-                    {project.name}
-                  </button>
+                  <div key={project.id} className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => setProjectId(project.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-l-full text-sm font-medium transition-all ${
+                        projectId === project.id 
+                          ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-400' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} />
+                      {project.name}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteProject(project.id);
+                      }}
+                      className="px-2 py-1.5 bg-gray-100 hover:bg-rose-100 text-gray-400 hover:text-rose-500 rounded-r-full transition-all"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
-              <input
-                type="text"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newProjectName.trim()) {
-                    addProject(newProjectName.trim());
-                    setNewProjectName('');
-                  }
-                }}
-                placeholder="+ Add project"
-                className="w-full mt-2 px-3 py-2 text-sm bg-gray-50 rounded-xl border-0 focus:bg-white focus:ring-2 focus:ring-primary-400 transition-all"
-              />
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newProjectName.trim()) {
+                      addProject(newProjectName.trim());
+                      setNewProjectName('');
+                    }
+                  }}
+                  placeholder="New project name"
+                  className="flex-1 px-3 py-2 text-sm bg-gray-50 rounded-xl border-0 focus:bg-white focus:ring-2 focus:ring-primary-400 transition-all"
+                />
+                <button
+                  onClick={() => {
+                    if (newProjectName.trim()) {
+                      addProject(newProjectName.trim());
+                      setNewProjectName('');
+                    }
+                  }}
+                  className="px-4 py-2 bg-primary-500 text-white rounded-xl text-sm font-medium hover:bg-primary-600 active:scale-95 transition-all"
+                >
+                  Add
+                </button>
+              </div>
             </div>
 
             {/* Tags Pills */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tags</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {tags.map((tag) => (
                   <button
                     key={tag.id}
@@ -753,6 +778,7 @@ function App() {
                     </button>
                   ))}
                 </div>
+              <div className="flex gap-2">
               <input
                 type="text"
                 value={newTagName}
@@ -763,9 +789,21 @@ function App() {
                     setNewTagName('');
                   }
                 }}
-                placeholder="+ Add tag"
-                className="w-full mt-2 px-3 py-2 text-sm bg-gray-50 rounded-xl border-0 focus:bg-white focus:ring-2 focus:ring-primary-400 transition-all"
+                placeholder="New tag name"
+                className="flex-1 px-3 py-2 text-sm bg-gray-50 rounded-xl border-0 focus:bg-white focus:ring-2 focus:ring-primary-400 transition-all"
               />
+              <button
+                onClick={() => {
+                  if (newTagName.trim()) {
+                    addTag(newTagName.trim());
+                    setNewTagName('');
+                  }
+                }}
+                className="px-4 py-2 bg-primary-500 text-white rounded-xl text-sm font-medium hover:bg-primary-600 active:scale-95 transition-all"
+              >
+                Add
+              </button>
+              </div>
               </div>
 
             {(priority || projectId || tagIds.length > 0) && (
