@@ -723,26 +723,50 @@ function App() {
                   </button>
                 ))}
               </div>
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newProjectName.trim()) {
+                    addProject(newProjectName.trim());
+                    setNewProjectName('');
+                  }
+                }}
+                placeholder="+ Add project"
+                className="w-full mt-2 px-3 py-2 text-sm bg-gray-50 rounded-xl border-0 focus:bg-white focus:ring-2 focus:ring-primary-400 transition-all"
+              />
             </div>
 
             {/* Tags Pills */}
-            {tags.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tags</p>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <button
-                      key={tag.id}
-                      onClick={() => toggleTagId(tag.id)}
-                      className={`tag text-xs transition-all ${tagIds.includes(tag.id) ? 'ring-2 ring-offset-1 ring-primary-400' : ''}`}
-                      style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                    >
-                      {tag.name}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tags</p>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleTagId(tag.id)}
+                    className={`tag text-xs transition-all ${tagIds.includes(tag.id) ? 'ring-2 ring-offset-1 ring-primary-400' : ''}`}
+                    style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                  >
+                    {tag.name}
                     </button>
                   ))}
                 </div>
+              <input
+                type="text"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newTagName.trim()) {
+                    addTag(newTagName.trim());
+                    setNewTagName('');
+                  }
+                }}
+                placeholder="+ Add tag"
+                className="w-full mt-2 px-3 py-2 text-sm bg-gray-50 rounded-xl border-0 focus:bg-white focus:ring-2 focus:ring-primary-400 transition-all"
+              />
               </div>
-            )}
 
             {(priority || projectId || tagIds.length > 0) && (
               <button 
@@ -990,9 +1014,9 @@ function App() {
                 </div>
                 <button 
                   onClick={() => setShowTaskModal(false)} 
-                  className="p-1.5 hover:bg-gray-100/80 rounded-xl transition-all duration-200 hover:scale-110 hover:rotate-12"
+                  className="p-2 hover:bg-gray-100/80 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-600 hover:rotate-90"
                 >
-                  <img src="/Logo.avif" alt="Close" className="w-6 h-6 object-contain" />
+                  <Icons.Close />
                 </button>
               </div>
             </div>
@@ -1181,9 +1205,9 @@ function App() {
                 </div>
                 <button 
                   onClick={() => setShowSettingsModal(false)} 
-                  className="p-1.5 hover:bg-gray-100/80 rounded-xl transition-all duration-200 hover:scale-110 hover:rotate-12"
+                  className="p-2 hover:bg-gray-100/80 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-600 hover:rotate-90"
                 >
-                  <img src="/Logo.avif" alt="Close" className="w-6 h-6 object-contain" />
+                  <Icons.Close />
                 </button>
               </div>
             </div>
