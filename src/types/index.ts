@@ -3,6 +3,14 @@ export type TaskStatus = 'pending' | 'completed';
 export type SortOption = 'dueDate' | 'priority' | 'newest' | 'manual';
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly';
 
+// Amazon task types
+export type AmazonTaskType = 'listing' | 'premium_a_plus' | 'basic_a_plus' | 'store_front' | 'brand_story' | 'color_variation' | 'mini_task';
+
+export interface AmazonTaskItem {
+  type: AmazonTaskType;
+  quantity: number;
+}
+
 export interface Subtask {
   id: string;
   title: string;
@@ -25,6 +33,13 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  // Team assignment fields
+  teamId: string | null;
+  assignedTo: string | null;
+  createdBy: string | null;
+  // Amazon task tracking
+  isAmazon: boolean;
+  amazonTasks: AmazonTaskItem[];
 }
 
 export interface Project {

@@ -1,0 +1,2 @@
+root: C:\Users\Acer\AppData\Local\nvm
+path: C:\nvm4w\nodejs

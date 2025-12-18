@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import type { Task, Subtask, Priority, TaskStatus, RecurrenceType } from '../types';
-import { taskDb } from '../db';
+import { supabase } from '../lib/supabase';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 
 interface TaskState {
@@ -11,7 +11,7 @@ interface TaskState {
 
   // Actions
   loadTasks: () => Promise<void>;
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) => Promise<Task>;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'> & { id?: string }) => Promise<Task>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   toggleTaskStatus: (id: string) => Promise<void>;
@@ -24,6 +24,31 @@ interface TaskState {
   toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>;
 }
 
+// Convert Supabase task to app Task format
+const mapSupabaseTask = (t: any): Task => ({
+  id: t.id,
+  title: t.title,
+  notes: t.notes || '',
+  projectId: t.project_id,
+  tagIds: [], // Tags handled separately
+  priority: t.priority as Priority,
+  dueDate: t.due_date,
+  order: t.order || 0,
+  status: t.status as TaskStatus,
+  subtasks: t.subtasks || [],
+  attachments: t.attachments || [],
+  recurrence: (t.recurrence || 'none') as RecurrenceType,
+  createdAt: t.created_at,
+  updatedAt: t.created_at,
+  completedAt: t.completed_at,
+  teamId: t.team_id,
+  assignedTo: t.assigned_to,
+  createdBy: t.created_by,
+  // Amazon fields
+  isAmazon: t.is_amazon || false,
+  amazonTasks: t.amazon_tasks || [],
+});
+
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
   loading: false,
@@ -32,7 +57,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   loadTasks: async () => {
     set({ loading: true });
     try {
-      const tasks = await taskDb.getAll();
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('order', { ascending: true });
+
+      if (error) throw error;
+
+      const tasks = (data || []).map(mapSupabaseTask);
       set({ tasks, initialized: true });
     } catch (error) {
       console.error('Failed to load tasks:', error);
@@ -45,22 +77,74 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const { tasks } = get();
     const maxOrder = tasks.length > 0 ? Math.max(...tasks.map((t) => t.order)) : 0;
 
-    const newTask: Task = {
-      ...taskData,
-      id: uuidv4(),
-      order: maxOrder + 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
 
-    await taskDb.add(newTask);
+    if (!userId) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        title: taskData.title,
+        notes: taskData.notes,
+        status: taskData.status,
+        priority: taskData.priority,
+        due_date: taskData.dueDate ? taskData.dueDate.split('T')[0] : null,
+        created_by: userId,
+        assigned_to: taskData.assignedTo,
+        team_id: taskData.teamId || null,
+        project_id: (() => { console.log('PROJECT ID BEING SENT:', taskData.projectId); return null; })(),
+        order: maxOrder + 1,
+        subtasks: taskData.subtasks,
+        attachments: taskData.attachments,
+        recurrence: taskData.recurrence === 'none' ? null : taskData.recurrence,
+        is_amazon: taskData.isAmazon || false,
+        amazon_tasks: taskData.amazonTasks || [],
+      } as any)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('SUPABASE INSERT ERROR:', error);
+      console.error('Error Code:', error.code);
+      console.error('Error Message:', error.message);
+      console.error('Error Details:', error.details);
+      throw error;
+    }
+
+    const newTask: Task = mapSupabaseTask(data);
     set({ tasks: [...tasks, newTask] });
     return newTask;
   },
 
   updateTask: async (id, updates) => {
     const { tasks } = get();
-    await taskDb.update(id, updates);
+
+    const supabaseUpdates: any = {};
+    if (updates.title !== undefined) supabaseUpdates.title = updates.title;
+    if (updates.notes !== undefined) supabaseUpdates.notes = updates.notes;
+    if (updates.status !== undefined) supabaseUpdates.status = updates.status;
+    if (updates.priority !== undefined) supabaseUpdates.priority = updates.priority;
+    if (updates.dueDate !== undefined) supabaseUpdates.due_date = updates.dueDate ? updates.dueDate.split('T')[0] : null;
+    if (updates.projectId !== undefined) supabaseUpdates.project_id = updates.projectId;
+    if (updates.teamId !== undefined) supabaseUpdates.team_id = updates.teamId;
+    if (updates.assignedTo !== undefined) supabaseUpdates.assigned_to = updates.assignedTo;
+    if (updates.subtasks !== undefined) supabaseUpdates.subtasks = updates.subtasks;
+    if (updates.attachments !== undefined) supabaseUpdates.attachments = updates.attachments;
+    if (updates.recurrence !== undefined) supabaseUpdates.recurrence = updates.recurrence;
+    if (updates.completedAt !== undefined) supabaseUpdates.completed_at = updates.completedAt;
+    if (updates.order !== undefined) supabaseUpdates.order = updates.order;
+    if (updates.isAmazon !== undefined) supabaseUpdates.is_amazon = updates.isAmazon;
+    if (updates.amazonTasks !== undefined) supabaseUpdates.amazon_tasks = updates.amazonTasks;
+
+    const client = supabase as any;
+    const { error } = await client
+      .from('tasks')
+      .update(supabaseUpdates)
+      .eq('id', id);
+
+    if (error) throw error;
+
     set({
       tasks: tasks.map((task) =>
         task.id === id
@@ -72,7 +156,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   deleteTask: async (id) => {
     const { tasks } = get();
-    await taskDb.delete(id);
+
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
     set({ tasks: tasks.filter((task) => task.id !== id) });
   },
 
@@ -84,7 +175,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const newStatus: TaskStatus = task.status === 'pending' ? 'completed' : 'pending';
     const completedAt = newStatus === 'completed' ? new Date().toISOString() : null;
 
-    await taskDb.update(id, { status: newStatus, completedAt });
+    const statusClient = supabase as any;
+    const { error } = await statusClient
+      .from('tasks')
+      .update({ status: newStatus, completed_at: completedAt })
+      .eq('id', id);
+
+    if (error) throw error;
+
     set({
       tasks: tasks.map((t) =>
         t.id === id
@@ -112,7 +210,6 @@ export const useTaskStore = create<TaskState>((set, get) => ({
           return;
       }
 
-      // Create new recurring task
       await addTask({
         title: task.title,
         notes: task.notes,
@@ -125,6 +222,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         attachments: task.attachments,
         recurrence: task.recurrence,
         completedAt: null,
+        teamId: task.teamId || null,
+        assignedTo: task.assignedTo || null,
+        createdBy: task.createdBy || null,
+        isAmazon: task.isAmazon || false,
+        amazonTasks: task.amazonTasks || [],
       });
     }
   },
@@ -136,9 +238,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       return task ? { ...task, order: index } : null;
     }).filter(Boolean) as Task[];
 
-    // Update all tasks order in DB
+    // Update all tasks order in Supabase
+    const orderClient = supabase as any;
     for (const task of reorderedTasks) {
-      await taskDb.update(task.id, { order: task.order });
+      await orderClient
+        .from('tasks')
+        .update({ order: task.order })
+        .eq('id', task.id);
     }
 
     set({ tasks: reorderedTasks });
@@ -156,7 +262,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
 
     const updatedSubtasks = [...task.subtasks, newSubtask];
-    await taskDb.update(taskId, { subtasks: updatedSubtasks });
+
+    const subtaskClient = supabase as any;
+    await subtaskClient
+      .from('tasks')
+      .update({ subtasks: updatedSubtasks })
+      .eq('id', taskId);
+
     set({
       tasks: tasks.map((t) =>
         t.id === taskId
@@ -174,7 +286,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const updatedSubtasks = task.subtasks.map((st) =>
       st.id === subtaskId ? { ...st, ...updates } : st
     );
-    await taskDb.update(taskId, { subtasks: updatedSubtasks });
+
+    const updateClient1 = supabase as any;
+    await updateClient1
+      .from('tasks')
+      .update({ subtasks: updatedSubtasks })
+      .eq('id', taskId);
+
     set({
       tasks: tasks.map((t) =>
         t.id === taskId
@@ -190,7 +308,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     if (!task) return;
 
     const updatedSubtasks = task.subtasks.filter((st) => st.id !== subtaskId);
-    await taskDb.update(taskId, { subtasks: updatedSubtasks });
+
+    const deleteClient = supabase as any;
+    await deleteClient
+      .from('tasks')
+      .update({ subtasks: updatedSubtasks })
+      .eq('id', taskId);
+
     set({
       tasks: tasks.map((t) =>
         t.id === taskId
@@ -208,7 +332,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const updatedSubtasks = task.subtasks.map((st) =>
       st.id === subtaskId ? { ...st, completed: !st.completed } : st
     );
-    await taskDb.update(taskId, { subtasks: updatedSubtasks });
+
+    const toggleClient = supabase as any;
+    await toggleClient
+      .from('tasks')
+      .update({ subtasks: updatedSubtasks })
+      .eq('id', taskId);
+
     set({
       tasks: tasks.map((t) =>
         t.id === taskId
@@ -232,4 +362,10 @@ export const createEmptyTask = (): Omit<Task, 'id' | 'createdAt' | 'updatedAt' |
   attachments: [],
   recurrence: 'none' as RecurrenceType,
   completedAt: null,
+  teamId: null,
+  assignedTo: null,
+  createdBy: null,
+  // Amazon fields
+  isAmazon: false,
+  amazonTasks: [],
 });

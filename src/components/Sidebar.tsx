@@ -3,13 +3,13 @@ import { useProjectStore, useTagStore, useFilterStore, useUIStore, useTaskStore 
 import { isToday, isBefore, startOfDay, parseISO, isThisWeek } from 'date-fns';
 
 export function Sidebar() {
-  const { sidebarOpen, setSidebarOpen } = useUIStore();
+  const { sidebarOpen, setSidebarOpen, openLeaderboard } = useUIStore();
   const projects = useProjectStore((state) => state.projects);
   const { addProject, deleteProject } = useProjectStore();
   const tags = useTagStore((state) => state.tags);
   const { addTag, deleteTag } = useTagStore();
   const tasks = useTaskStore((state) => state.tasks);
-  
+
   const {
     status,
     setStatus,
@@ -70,11 +70,24 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:transform-none ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } flex flex-col h-[calc(100vh-57px)] overflow-y-auto`}
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          } flex flex-col h-[calc(100vh-57px)] overflow-y-auto`}
       >
         <div className="p-4 space-y-6 flex-1">
+          {/* Leaderboard Button */}
+          <button
+            onClick={() => { openLeaderboard(); setSidebarOpen(false); }}
+            className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl text-white shadow-lg shadow-orange-200 transform transition-all hover:scale-[1.02] active:scale-95"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🏆</span>
+              <span className="font-bold">Leaderboard</span>
+            </div>
+            <svg className="w-5 h-5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
           {/* Quick Filters */}
           <div>
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -153,7 +166,7 @@ export function Sidebar() {
                 </svg>
               </button>
             </div>
-            
+
             {showProjectInput && (
               <div className="flex gap-2 mb-2">
                 <input
@@ -242,11 +255,10 @@ export function Sidebar() {
                 <div key={tag.id} className="group flex items-center">
                   <button
                     onClick={() => toggleTagId(tag.id)}
-                    className={`tag transition-all ${
-                      tagIds.includes(tag.id)
+                    className={`tag transition-all ${tagIds.includes(tag.id)
                         ? 'ring-2 ring-offset-1'
                         : ''
-                    }`}
+                      }`}
                     style={{
                       backgroundColor: `${tag.color}20`,
                       color: tag.color,

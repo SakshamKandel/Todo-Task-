@@ -15,11 +15,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { useState } from 'react';
-import { TaskCard } from './TaskCard';
+// TaskCard component is defined in App.tsx - this file is unused
+// import { TaskCard } from './TaskCard';
 import { useTaskStore, useFilterStore, useUIStore } from '../store';
 import { useFilteredTasks } from '../hooks';
 import type { Task } from '../types';
 
+// Note: This TaskList component is currently not used - the main task rendering is in App.tsx
 export function TaskList() {
   const { reorderTasks } = useTaskStore();
   const sortBy = useFilterStore((state) => state.sortBy);
@@ -82,6 +84,7 @@ export function TaskList() {
     );
   }
 
+  // Return empty since TaskCard component doesn't exist - main rendering is in App.tsx
   return (
     <DndContext
       sensors={sensors}
@@ -91,14 +94,18 @@ export function TaskList() {
     >
       <SortableContext items={filteredTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-3 p-4">
+          {/* Tasks are rendered in App.tsx, not here */}
           {filteredTasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <div key={task.id} className="p-4 bg-white rounded-xl border border-gray-200">
+              <h3 className="font-semibold text-gray-800">{task.title}</h3>
+            </div>
           ))}
         </div>
       </SortableContext>
       <DragOverlay>
-        {activeTask ? <TaskCard task={activeTask} isDragging /> : null}
+        {activeTask ? <div className="p-4 bg-white rounded-xl shadow-lg">{activeTask.title}</div> : null}
       </DragOverlay>
     </DndContext>
   );
 }
+
