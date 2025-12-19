@@ -382,31 +382,59 @@ export default function OrganizationPage({ onClose }: OrganizationPageProps) {
                                 <div className="p-6">
                                     <h4 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-4">Team Members</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {team.members?.map((member) => (
-                                            <div
-                                                key={member.id}
-                                                className="flex items-center gap-3 p-4 bg-zinc-50 border-l-4 border-l-transparent hover:border-l-orange-500 transition-colors"
-                                            >
-                                                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
-                                                    {member.profile?.name?.charAt(0).toUpperCase() || 'U'}
+                                        {team.members?.map((member) => {
+                                            const myMembership = team.members?.find(m => m.user_id === user?.id);
+                                            const isLeader = myMembership?.role === 'leader';
+                                            const canDelete = (isLeader || isRole('superadmin') || isRole('admin')) && member.user_id !== user?.id;
+
+                                            const handleRemoveMember = async () => {
+                                                if (!confirm(`Remove ${member.profile?.name} from this team?`)) return;
+                                                try {
+                                                    await supabase.from('team_members').delete().eq('id', member.id);
+                                                    toast.success('Member removed');
+                                                    loadMyTeams();
+                                                } catch (err: any) {
+                                                    toast.error(err.message || 'Failed to remove');
+                                                }
+                                            };
+
+                                            return (
+                                                <div
+                                                    key={member.id}
+                                                    className="flex items-center gap-3 p-4 bg-zinc-50 border-l-4 border-l-transparent hover:border-l-orange-500 transition-colors"
+                                                >
+                                                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
+                                                        {member.profile?.name?.charAt(0).toUpperCase() || 'U'}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-zinc-900 truncate">
+                                                            {member.profile?.name}
+                                                            {member.user_id === user?.id && (
+                                                                <span className="ml-2 text-xs text-orange-500">(You)</span>
+                                                            )}
+                                                        </p>
+                                                        <p className="text-sm text-zinc-500 truncate">{member.profile?.email}</p>
+                                                    </div>
+                                                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${member.role === 'leader'
+                                                        ? 'bg-purple-100 text-purple-700'
+                                                        : 'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                        {member.role}
+                                                    </span>
+                                                    {canDelete && (
+                                                        <button
+                                                            onClick={handleRemoveMember}
+                                                            className="p-2 bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-600 transition-colors"
+                                                            title="Remove member"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-zinc-900 truncate">
-                                                        {member.profile?.name}
-                                                        {member.user_id === user?.id && (
-                                                            <span className="ml-2 text-xs text-orange-500">(You)</span>
-                                                        )}
-                                                    </p>
-                                                    <p className="text-sm text-zinc-500 truncate">{member.profile?.email}</p>
-                                                </div>
-                                                <span className={`px-2 py-1 text-xs font-bold rounded-full ${member.role === 'leader'
-                                                    ? 'bg-purple-100 text-purple-700'
-                                                    : 'bg-gray-100 text-gray-600'
-                                                    }`}>
-                                                    {member.role}
-                                                </span>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>

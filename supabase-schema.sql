@@ -1,5 +1,5 @@
 -- =============================================
--- TaskFlow Supabase Database Schema
+-- Asinify Supabase Database Schema
 -- Run this in your Supabase SQL Editor
 -- =============================================
 

@@ -42,6 +42,7 @@ import LoginPage from './pages/LoginPage';
 import AdminPanel from './pages/AdminPanel';
 import OrganizationPage from './pages/OrganizationPage';
 import LeaderboardModal from './components/LeaderboardModal';
+import { SettingsModal } from './components/SettingsModal';
 import StaggeredMenu from './components/StaggeredMenu';
 import { supabase } from './lib/supabase';
 import type { Team, Profile } from './lib/database.types';
@@ -497,15 +498,32 @@ function App() {
   // Show loading while checking auth (AFTER all hooks)
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse shadow-lg">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-screen flex items-center justify-center bg-white relative overflow-hidden">
+        <div className="text-center relative z-10">
+          {/* Animated Logo */}
+          <div className="relative mb-6">
+            <div className="w-20 h-20 mx-auto">
+              <img
+                src="/Logo.avif"
+                alt="Asinify"
+                className="w-full h-full object-contain"
+                style={{ animation: 'logoFloat 2s ease-in-out infinite' }}
+              />
+            </div>
           </div>
-          <p className="text-gray-500 text-sm">Loading...</p>
+
+          {/* Loading bar */}
+          <div className="w-40 h-1 bg-zinc-100 mx-auto mb-4 overflow-hidden">
+            <div className="h-full w-1/3 bg-orange-500" style={{ animation: 'shimmer 1.2s ease-in-out infinite' }} />
+          </div>
+
+          <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Loading</p>
         </div>
+
+        <style>{`
+          @keyframes shimmer { 0% { transform: translateX(-150%); } 100% { transform: translateX(350%); } }
+          @keyframes logoFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        `}</style>
       </div>
     );
   }
@@ -634,16 +652,37 @@ function App() {
 
   if (!initialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6 animate-pulse shadow-lg">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-screen flex items-center justify-center bg-white relative overflow-hidden">
+        <div className="text-center relative z-10">
+          {/* Logo with animation */}
+          <div className="relative mb-6">
+            <div className="w-24 h-24 mx-auto">
+              <img
+                src="/Logo.avif"
+                alt="Asinify"
+                className="w-full h-full object-contain"
+                style={{ animation: 'logoFloat 2s ease-in-out infinite' }}
+              />
+            </div>
           </div>
-          <h2 className="text-lg font-display font-semibold text-gray-800 mb-2">TaskFlow</h2>
-          <p className="text-gray-500 text-sm">Loading your workspace...</p>
+
+          {/* Brand name */}
+          <h2 className="text-2xl font-bold text-zinc-900 uppercase tracking-widest mb-4">Asinify</h2>
+
+          {/* Loading dots */}
+          <div className="flex items-center justify-center gap-1.5 mb-3">
+            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full" style={{ animation: 'bounce 1s ease-in-out infinite' }} />
+            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full" style={{ animation: 'bounce 1s ease-in-out infinite 0.15s' }} />
+            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full" style={{ animation: 'bounce 1s ease-in-out infinite 0.3s' }} />
+          </div>
+
+          <p className="text-zinc-400 text-xs font-medium">Preparing your workspace...</p>
         </div>
+
+        <style>{`
+          @keyframes logoFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+          @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        `}</style>
       </div>
     );
   }
@@ -668,6 +707,7 @@ function App() {
           { label: 'My Tasks', ariaLabel: 'View tasks assigned to me', link: '#', onClick: () => setShowAssignedToMe(true) },
           { label: 'Leaderboard', ariaLabel: 'View leaderboard', link: '#', onClick: () => openLeaderboard() },
           { label: 'Organization', ariaLabel: 'My organization', link: '#', onClick: () => setShowOrganizationPage(true) },
+          { label: 'Settings', ariaLabel: 'Account settings', link: '#', onClick: () => { const { openSettingsModal } = useUIStore.getState(); openSettingsModal(); } },
           ...(isRole('admin') || isRole('superadmin') ? [{ label: 'Admin', ariaLabel: 'Admin panel', link: '#', onClick: () => setShowAdminPanel(true) }] : []),
           { label: 'Sign Out', ariaLabel: 'Sign out', link: '#', onClick: () => signOut() }
         ]}
@@ -720,6 +760,123 @@ function App() {
             </div>
           </div>
         </header>
+
+        {/* Projects Filter Bar */}
+        <div className="px-12 py-4 border-b border-zinc-100 bg-white sticky top-[176px] z-30">
+          <div className="flex items-center gap-3 overflow-x-auto pb-2 custom-scrollbar">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest mr-2 flex-shrink-0">Projects:</span>
+            <button
+              onClick={() => setProjectId(null)}
+              className={`px-4 py-2 text-sm font-bold transition-all flex-shrink-0 ${!projectId
+                ? 'bg-orange-500 text-white'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                }`}
+            >
+              All
+            </button>
+            {projects.map((project) => (
+              <div key={project.id} className="flex items-center gap-1 flex-shrink-0 group">
+                <button
+                  onClick={() => setProjectId(project.id)}
+                  className={`px-4 py-2 text-sm font-bold transition-all flex items-center gap-2 ${projectId === project.id
+                    ? 'bg-zinc-900 text-white'
+                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                    }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: project.color }}
+                  />
+                  {project.name}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toast((t) => (
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <p className="font-bold text-white">Delete "{project.name}"?</p>
+                          <p className="text-zinc-400 text-sm">This cannot be undone.</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => toast.dismiss(t.id)}
+                            className="px-3 py-1.5 bg-zinc-700 text-white text-sm font-bold hover:bg-zinc-600"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              deleteProject(project.id);
+                              toast.dismiss(t.id);
+                              toast.success('Project deleted');
+                              if (projectId === project.id) setProjectId(null);
+                            }}
+                            className="px-3 py-1.5 bg-red-500 text-white text-sm font-bold hover:bg-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ), { duration: 10000 });
+                  }}
+                  className={`p-2 transition-all opacity-0 group-hover:opacity-100 ${projectId === project.id ? 'text-zinc-400 hover:text-red-400' : 'text-zinc-400 hover:text-red-500'}`}
+                  title="Delete project"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+
+            {/* New Project Button/Form */}
+            {newProjectName !== null && newProjectName !== '' ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (newProjectName.trim()) {
+                    const colors = ['#f97316', '#22c55e', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899'];
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    addProject(newProjectName.trim(), randomColor);
+                    setNewProjectName('');
+                    toast.success('Project created!');
+                  }
+                }}
+                className="flex items-center gap-2 flex-shrink-0"
+              >
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="Project name..."
+                  autoFocus
+                  className="px-3 py-2 text-sm bg-zinc-50 border-l-4 border-l-orange-500 w-40 focus:outline-none"
+                />
+                <button type="submit" className="px-3 py-2 bg-zinc-900 text-white text-sm font-bold hover:bg-orange-500">
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewProjectName('')}
+                  className="px-3 py-2 bg-zinc-100 text-zinc-600 text-sm font-bold hover:bg-zinc-200"
+                >
+                  ✕
+                </button>
+              </form>
+            ) : (
+              <button
+                onClick={() => setNewProjectName(' ')}
+                className="px-4 py-2 text-sm font-bold transition-all flex-shrink-0 bg-zinc-100 text-zinc-600 hover:bg-orange-100 hover:text-orange-600 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="flex-1 overflow-x-auto overflow-y-hidden px-8 pb-8 custom-scrollbar">
           <div className="h-full flex gap-8 min-w-max pb-4">
@@ -887,22 +1044,8 @@ function App() {
       <LeaderboardModal />
       {showOrganizationPage && <OrganizationPage onClose={() => setShowOrganizationPage(false)} />}
 
-      {/* Settings Modal (kept simple for brevity, can expand later) */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-md" onClick={() => setShowSettingsModal(false)} />
-          <div className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Settings</h2>
-            <div className="space-y-3">
-              <button onClick={handleExport} className="w-full p-4 bg-zinc-50 rounded-xl font-bold text-left hover:bg-zinc-100">Export Data</button>
-              <label className="w-full flex items-center p-4 bg-zinc-50 rounded-xl font-bold text-left hover:bg-zinc-100 cursor-pointer">
-                Import Data <input type="file" className="hidden" onChange={handleImport} />
-              </label>
-              <button onClick={() => { if (confirm('Delete all?')) { clearAllData(); window.location.reload(); } }} className="w-full p-4 bg-red-50 text-red-600 rounded-xl font-bold text-left hover:bg-red-100">Clear Data</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Settings Modal */}
+      <SettingsModal />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 -- =============================================
--- Admin Delete Policy for TaskFlow
+-- Admin Delete Policy for Asinify
 -- Run this in your Supabase SQL Editor
 -- =============================================
 

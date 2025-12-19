@@ -1,6 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProjectStore, useTagStore, useFilterStore, useUIStore, useTaskStore } from '../store';
 import { isToday, isBefore, startOfDay, parseISO, isThisWeek } from 'date-fns';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import type { Team } from '../lib/database.types';
+
+interface TeamWithProjects extends Team {
+  projects: { id: string; name: string; color: string; team_id: string | null }[];
+}
 
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen, openLeaderboard } = useUIStore();
@@ -9,6 +16,7 @@ export function Sidebar() {
   const tags = useTagStore((state) => state.tags);
   const { addTag, deleteTag } = useTagStore();
   const tasks = useTaskStore((state) => state.tasks);
+  const { user } = useAuth();
 
   const {
     status,
@@ -26,6 +34,62 @@ export function Sidebar() {
   const [newTagName, setNewTagName] = useState('');
   const [showProjectInput, setShowProjectInput] = useState(false);
   const [showTagInput, setShowTagInput] = useState(false);
+  const [userTeams, setUserTeams] = useState<Team[]>([]);
+  const [teamProjects, setTeamProjects] = useState<{ teamId: string; teamName: string; projects: typeof projects }[]>([]);
+
+  // Fetch user's teams and organize projects
+  useEffect(() => {
+    const loadTeamsAndProjects = async () => {
+      if (!user) return;
+
+      try {
+        // Get teams user belongs to
+        const { data: memberships } = await supabase
+          .from('team_members')
+          .select('team_id')
+          .eq('user_id', user.id) as { data: { team_id: string }[] | null };
+
+        if (memberships && memberships.length > 0) {
+          const teamIds = memberships.map(m => m.team_id);
+
+          // Get team details
+          const { data: teams } = await supabase
+            .from('teams')
+            .select('*')
+            .in('id', teamIds) as { data: Team[] | null };
+
+          if (teams) {
+            setUserTeams(teams);
+
+            // Get projects for these teams
+            const { data: dbProjects } = await supabase
+              .from('projects')
+              .select('*')
+              .in('team_id', teamIds) as { data: { id: string; name: string; color: string; team_id: string; created_at: string }[] | null };
+
+            // Group projects by team
+            const grouped = teams.map(team => ({
+              teamId: team.id,
+              teamName: team.name,
+              projects: (dbProjects || []).filter(p => p.team_id === team.id).map(p => ({
+                id: p.id,
+                name: p.name,
+                color: p.color,
+                order: 0,
+                createdAt: p.created_at
+              }))
+            }));
+
+            setTeamProjects(grouped);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading teams:', error);
+      }
+    };
+
+    loadTeamsAndProjects();
+  }, [user, projects]);
 
   // Count tasks
   const pendingCount = tasks.filter((t) => t.status === 'pending').length;
@@ -151,7 +215,7 @@ export function Sidebar() {
             </nav>
           </div>
 
-          {/* Projects */}
+          {/* Projects - Grouped by Organization */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -186,32 +250,95 @@ export function Sidebar() {
               </div>
             )}
 
-            <nav className="space-y-1">
-              {projects.map((project) => (
-                <div key={project.id} className="group flex items-center">
-                  <button
-                    onClick={() => { setProjectId(project.id); setStatus('all'); setDueDateFilter('all'); setSidebarOpen(false); }}
-                    className={`sidebar-item flex-1 ${projectId === project.id ? 'active' : ''}`}
-                  >
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: project.color }}
-                    />
-                    <span className="truncate">{project.name}</span>
-                    <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full">
-                      {getTaskCountForProject(project.id)}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => deleteProject(project.id)}
-                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-all"
-                  >
-                    <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <nav className="space-y-3">
+              {/* Organization/Team Projects */}
+              {teamProjects.map((teamGroup) => (
+                <div key={teamGroup.teamId} className="space-y-1">
+                  {/* Organization Header */}
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                  </button>
+                    <span className="text-xs font-bold text-orange-600 uppercase tracking-wider">
+                      {teamGroup.teamName}
+                    </span>
+                  </div>
+                  {/* Team's Projects */}
+                  {teamGroup.projects.length > 0 ? (
+                    teamGroup.projects.map((project) => (
+                      <div key={project.id} className="group flex items-center pl-4">
+                        <button
+                          onClick={() => { setProjectId(project.id); setStatus('all'); setDueDateFilter('all'); setSidebarOpen(false); }}
+                          className={`sidebar-item flex-1 ${projectId === project.id ? 'active' : ''}`}
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: project.color }}
+                          />
+                          <span className="truncate">{project.name}</span>
+                          <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full">
+                            {getTaskCountForProject(project.id)}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => deleteProject(project.id)}
+                          className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-all"
+                        >
+                          <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 pl-6">No projects in this organization</p>
+                  )}
                 </div>
               ))}
+
+              {/* Personal Projects (no team) */}
+              {projects.filter(p => !p.projectId || !teamProjects.some(tp => tp.projects.some(pp => pp.id === p.id))).length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Personal
+                    </span>
+                  </div>
+                  {projects.filter(p => !teamProjects.some(tp => tp.projects.some(pp => pp.id === p.id))).map((project) => (
+                    <div key={project.id} className="group flex items-center pl-4">
+                      <button
+                        onClick={() => { setProjectId(project.id); setStatus('all'); setDueDateFilter('all'); setSidebarOpen(false); }}
+                        className={`sidebar-item flex-1 ${projectId === project.id ? 'active' : ''}`}
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: project.color }}
+                        />
+                        <span className="truncate">{project.name}</span>
+                        <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full">
+                          {getTaskCountForProject(project.id)}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => deleteProject(project.id)}
+                        className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-all"
+                      >
+                        <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Show message if no projects at all */}
+              {teamProjects.length === 0 && projects.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-2">No projects yet</p>
+              )}
             </nav>
           </div>
 
@@ -256,8 +383,8 @@ export function Sidebar() {
                   <button
                     onClick={() => toggleTagId(tag.id)}
                     className={`tag transition-all ${tagIds.includes(tag.id)
-                        ? 'ring-2 ring-offset-1'
-                        : ''
+                      ? 'ring-2 ring-offset-1'
+                      : ''
                       }`}
                     style={{
                       backgroundColor: `${tag.color}20`,

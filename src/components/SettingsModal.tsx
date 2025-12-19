@@ -2,10 +2,14 @@ import { useState, useRef } from 'react';
 import { useUIStore } from '../store';
 import { exportData, importData, clearAllData } from '../db';
 import toast from 'react-hot-toast';
+import { ChangePasswordModal } from './ChangePasswordModal';
+import { useAuth } from '../contexts/AuthContext';
 
 export function SettingsModal() {
   const { settingsModalOpen, closeSettingsModal } = useUIStore();
+  const { profile, signOut } = useAuth();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = async () => {
@@ -53,103 +57,140 @@ export function SettingsModal() {
   if (!settingsModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
+    <div className="fixed inset-0 bg-black/60 z-[9998] flex items-center justify-center backdrop-blur-sm">
+      <div className="bg-white w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+
+        {/* Premium Header */}
+        <div className="px-8 py-6 border-b border-zinc-100 flex items-center justify-between bg-white shrink-0">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-orange-500 mb-1">Account</p>
+            <h2 className="text-3xl font-bold text-zinc-900 uppercase tracking-tight">
+              Settings
+            </h2>
+          </div>
+          <button
+            onClick={closeSettingsModal}
+            className="w-12 h-12 flex items-center justify-center bg-zinc-100 text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-8 bg-zinc-50 space-y-6">
+
+          {/* Profile Section */}
+          <div className="bg-white p-6 border-l-4 border-l-orange-500">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Profile</p>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-2xl font-black uppercase">
+                {profile?.name?.charAt(0) || 'U'}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-zinc-900">{profile?.name || 'User'}</h3>
+                <p className="text-sm text-zinc-500">{profile?.email}</p>
+                <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-black uppercase bg-orange-100 text-orange-600">
+                  {profile?.role || 'Member'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Security Section */}
+          <div className="bg-white p-6 border-l-4 border-l-zinc-200">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Security</p>
             <button
-              onClick={closeSettingsModal}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={() => setShowPasswordModal(true)}
+              className="w-full flex items-center gap-4 p-4 bg-zinc-50 hover:bg-zinc-100 transition-colors group"
             >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <div className="w-12 h-12 bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-bold text-zinc-900 uppercase text-sm tracking-wide">Change Password</div>
+                <div className="text-xs text-zinc-500">Update your account password</div>
+              </div>
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>
-        </div>
 
-        <div className="p-6 space-y-6">
-          {/* Data Management */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Data Management</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Your data is stored locally in your browser using IndexedDB. Export your data regularly to avoid losing it.
-            </p>
-
+          {/* Data Management Section */}
+          <div className="bg-white p-6 border-l-4 border-l-zinc-200">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Data Management</p>
             <div className="space-y-3">
               {/* Export */}
               <button
                 onClick={handleExport}
-                className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center gap-4 p-4 bg-zinc-50 hover:bg-emerald-50 transition-colors group"
               >
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                  <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                 </div>
-                <div className="text-left">
-                  <div className="font-medium text-gray-900">Export Data</div>
-                  <div className="text-sm text-gray-500">Download all your data as JSON</div>
+                <div className="text-left flex-1">
+                  <div className="font-bold text-zinc-900 uppercase text-sm tracking-wide">Export Data</div>
+                  <div className="text-xs text-zinc-500">Download all data as JSON</div>
                 </div>
               </button>
 
               {/* Import */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <label className="w-full flex items-center gap-4 p-4 bg-zinc-50 hover:bg-blue-50 transition-colors cursor-pointer group">
+                <div className="w-12 h-12 bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
                 </div>
-                <div className="text-left">
-                  <div className="font-medium text-gray-900">Import Data</div>
-                  <div className="text-sm text-gray-500">Restore from a JSON backup</div>
+                <div className="text-left flex-1">
+                  <div className="font-bold text-zinc-900 uppercase text-sm tracking-wide">Import Data</div>
+                  <div className="text-xs text-zinc-500">Restore from backup file</div>
                 </div>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleImport}
-                className="hidden"
-              />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
 
-              {/* Clear */}
+              {/* Clear Data */}
               {!showClearConfirm ? (
                 <button
                   onClick={() => setShowClearConfirm(true)}
-                  className="w-full flex items-center gap-3 p-3 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                  className="w-full flex items-center gap-4 p-4 bg-zinc-50 hover:bg-red-50 transition-colors group"
                 >
-                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </div>
-                  <div className="text-left">
-                    <div className="font-medium text-red-600">Clear All Data</div>
-                    <div className="text-sm text-gray-500">Permanently delete everything</div>
+                  <div className="text-left flex-1">
+                    <div className="font-bold text-red-600 uppercase text-sm tracking-wide">Clear All Data</div>
+                    <div className="text-xs text-zinc-500">Delete all local data permanently</div>
                   </div>
                 </button>
               ) : (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700 mb-3">
-                    Are you sure? This action cannot be undone.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleClearData}
-                      className="btn-danger flex-1"
-                    >
-                      Yes, Delete Everything
-                    </button>
+                <div className="p-4 bg-red-50 border-l-4 border-l-red-500">
+                  <p className="text-sm font-bold text-red-700 mb-3">Are you sure? This cannot be undone.</p>
+                  <div className="flex gap-3">
                     <button
                       onClick={() => setShowClearConfirm(false)}
-                      className="btn-secondary flex-1"
+                      className="flex-1 py-2 bg-white text-zinc-600 font-bold text-sm uppercase hover:bg-zinc-100 transition-colors"
                     >
                       Cancel
+                    </button>
+                    <button
+                      onClick={handleClearData}
+                      className="flex-1 py-2 bg-red-600 text-white font-bold text-sm uppercase hover:bg-red-700 transition-colors"
+                    >
+                      Delete All
                     </button>
                   </div>
                 </div>
@@ -157,16 +198,19 @@ export function SettingsModal() {
             </div>
           </div>
 
-          {/* About */}
-          <div className="pt-4 border-t border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">About</h3>
-            <p className="text-sm text-gray-500">
-              Todo Task is a local-first task management app. All your data is stored in your browser and never sent to any server.
-            </p>
-            <p className="text-sm text-gray-400 mt-2">Version 1.0.0</p>
+          {/* About Section */}
+          <div className="text-center py-4 text-zinc-400 text-xs">
+            <p className="font-bold uppercase tracking-widest">Asinify</p>
+            <p className="mt-1">Version 1.0.0</p>
           </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </div>
   );
 }
