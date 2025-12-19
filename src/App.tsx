@@ -38,12 +38,19 @@ import StickerPeel from './components/StickerPeel';
 import { exportData, importData, clearAllData } from './db';
 import type { Task, Priority, RecurrenceType } from './types';
 import { useAuth } from './contexts/AuthContext';
+import { useTheme } from './contexts/ThemeContext';
 import LoginPage from './pages/LoginPage';
 import AdminPanel from './pages/AdminPanel';
 import OrganizationPage from './pages/OrganizationPage';
+import { CalendarView } from './pages/CalendarView';
+import { Dashboard } from './pages/Dashboard';
 import LeaderboardModal from './components/LeaderboardModal';
 import { SettingsModal } from './components/SettingsModal';
 import StaggeredMenu from './components/StaggeredMenu';
+import { CommandPalette, useCommandPalette } from './components/CommandPalette';
+import { PomodoroTimer } from './components/PomodoroTimer';
+import { BulkActionsBar } from './components/BulkActionsBar';
+import { useTaskAssignmentNotification } from './hooks/useTaskAssignmentNotification';
 import { supabase } from './lib/supabase';
 import type { Team, Profile } from './lib/database.types';
 
@@ -154,7 +161,10 @@ function TaskCard({
   dragAttributes,
   setNodeRef,
   isDragging,
-  isOverlay
+  isOverlay,
+  isSelected,
+  onSelect,
+  bulkSelectMode
 }: {
   task: Task;
   project: any;
@@ -172,6 +182,9 @@ function TaskCard({
   setNodeRef?: (node: HTMLElement | null) => void;
   isDragging?: boolean;
   isOverlay?: boolean;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  bulkSelectMode?: boolean;
 }) {
   return (
     <div
@@ -179,21 +192,39 @@ function TaskCard({
       style={style}
       {...dragAttributes}
       {...dragListeners}
-      onClick={onClick}
-      className={`group relative p-6 bg-white border-l-4 transition-all duration-200 cursor-pointer
+      onClick={bulkSelectMode ? onSelect : onClick}
+      className={`group relative p-6 bg-white dark:bg-zinc-800 border-l-4 transition-all duration-200 cursor-pointer
         ${isDragging || isOverlay
           ? 'shadow-xl scale-[1.02] border-l-orange-500'
           : 'hover:shadow-lg hover:-translate-y-0.5'
         } 
         ${task.status === 'completed' ? 'opacity-50' : ''}
-        ${isOverdue && task.status !== 'completed' ? 'border-l-red-500 bg-red-50/30' : 'border-l-transparent hover:border-l-orange-400'}
+        ${isOverdue && task.status !== 'completed' ? 'border-l-red-500 bg-red-50/30 dark:bg-red-900/20' : 'border-l-transparent hover:border-l-orange-400'}
+        ${isSelected ? 'ring-2 ring-orange-500 bg-orange-50/50 dark:bg-orange-900/20' : ''}
        `}
     >
-      <div className="flex flex-col gap-4">
+      {/* Selection Checkbox */}
+      {bulkSelectMode && (
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
+          <div
+            className={`w-6 h-6 flex items-center justify-center border-2 transition-all ${isSelected
+              ? 'bg-orange-500 border-orange-500 text-white'
+              : 'bg-white dark:bg-zinc-700 border-zinc-300 dark:border-zinc-600'
+              }`}
+          >
+            {isSelected && (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+        </div>
+      )}
+      <div className={`flex flex-col gap-4 ${bulkSelectMode ? 'pl-8' : ''}`}>
         {/* Header: Project & Priority */}
         <div className="flex items-center justify-between">
           {project ? (
-            <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
               {project.name}
             </span>
           ) : (
@@ -209,26 +240,26 @@ function TaskCard({
 
         {/* Title */}
         <div>
-          <h3 className={`text-lg font-bold leading-tight text-zinc-900 ${task.status === 'completed' ? 'line-through text-zinc-400' : ''}`}>
+          <h3 className={`text-lg font-bold leading-tight text-zinc-900 dark:text-white ${task.status === 'completed' ? 'line-through text-zinc-400 dark:text-zinc-500' : ''}`}>
             {task.title}
           </h3>
           {task.notes && (
-            <p className="text-sm text-zinc-500 mt-2 line-clamp-2 leading-relaxed">{task.notes}</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 line-clamp-2 leading-relaxed">{task.notes}</p>
           )}
         </div>
 
         {/* Footer: Date, Subtasks, Tags */}
-        <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
+        <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-700">
           <div className="flex items-center gap-4">
             {task.dueDate && (
-              <span className={`flex items-center gap-1.5 text-xs font-semibold ${isOverdue ? 'text-red-500' : 'text-zinc-400'}`}>
+              <span className={`flex items-center gap-1.5 text-xs font-semibold ${isOverdue ? 'text-red-500' : 'text-zinc-400 dark:text-zinc-500'}`}>
                 <Icons.Calendar />
                 <span>{format(parseISO(task.dueDate), 'MMM d')}</span>
               </span>
             )}
 
             {totalSubtasks > 0 && (
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 dark:text-zinc-500">
                 <Icons.CheckCircle />
                 <span>{completedSubtasks}/{totalSubtasks}</span>
               </div>
@@ -251,14 +282,14 @@ function TaskCard({
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => onEdit(task)}
-              className="w-8 h-8 flex items-center justify-center bg-zinc-100 text-zinc-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+              className="w-8 h-8 flex items-center justify-center bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition-colors"
             >
               <Icons.Edit />
             </button>
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => onDelete(task.id)}
-              className="w-8 h-8 flex items-center justify-center bg-zinc-100 text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+              className="w-8 h-8 flex items-center justify-center bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
             >
               <Icons.Trash />
             </button>
@@ -270,13 +301,16 @@ function TaskCard({
 }
 
 // Draggable Task Card - Premium 2D
-function DraggableTaskCard({ task, onEdit, onDelete, onClick, projects, tags }: {
+function DraggableTaskCard({ task, onEdit, onDelete, onClick, projects, tags, isSelected, onSelect, bulkSelectMode }: {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onClick: () => void;
   projects: { id: string; name: string; color: string }[];
   tags: { id: string; name: string; color: string }[];
+  isSelected?: boolean;
+  onSelect?: () => void;
+  bulkSelectMode?: boolean;
 }) {
   const {
     attributes,
@@ -317,10 +351,13 @@ function DraggableTaskCard({ task, onEdit, onDelete, onClick, projects, tags }: 
       onDelete={onDelete}
       onClick={onClick}
       style={style}
-      dragListeners={listeners}
-      dragAttributes={attributes}
+      dragListeners={bulkSelectMode ? undefined : listeners}
+      dragAttributes={bulkSelectMode ? undefined : attributes}
       setNodeRef={setNodeRef}
       isDragging={isDragging}
+      isSelected={isSelected}
+      onSelect={onSelect}
+      bulkSelectMode={bulkSelectMode}
     />
   );
 }
@@ -388,11 +425,11 @@ function PremiumDroppableColumn({ id, title, count, colorScheme, children, isOve
   return (
     <div
       ref={setNodeRef}
-      className={`w-[420px] flex-shrink-0 flex flex-col h-full bg-zinc-50/50 transition-all duration-300 ${isOver ? 'ring-2 ring-orange-400/50 bg-orange-50/30' : ''}`}
+      className={`w-[420px] flex-shrink-0 flex flex-col h-full bg-zinc-50/50 dark:bg-zinc-800/50 transition-all duration-300 ${isOver ? 'ring-2 ring-orange-400/50 bg-orange-50/30 dark:bg-orange-900/20' : ''}`}
     >
-      <div className="py-6 px-4 border-b border-zinc-100">
+      <div className="py-6 px-4 border-b border-zinc-100 dark:border-zinc-700">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-zinc-900 uppercase tracking-tight">{title}</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">{title}</h2>
           <span className={`px-3 py-1 text-sm font-bold uppercase ${colorScheme === 'amber' ? 'text-orange-500' : 'text-emerald-500'
             }`}>
             {String(count).padStart(2, '0')}
@@ -408,11 +445,15 @@ function PremiumDroppableColumn({ id, title, count, colorScheme, children, isOve
 
 function App() {
   const { user, profile, loading: authLoading, signOut, isRole } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const { tasks, loadTasks, addTask, updateTask, deleteTask, toggleTaskStatus, reorderTasks } = useTaskStore();
   const { projects, loadProjects, addProject, deleteProject } = useProjectStore();
   const { tags, loadTags, addTag, deleteTag } = useTagStore();
   const { searchQuery, setSearchQuery, projectId, setProjectId, tagIds, toggleTagId, priority, setPriority, resetFilters } = useFilterStore();
 
+  // Listen for task assignment notifications
+  useTaskAssignmentNotification();
   const [initialized, setInitialized] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -423,6 +464,11 @@ function App() {
   const [showAssignedToMe, setShowAssignedToMe] = useState(false);
   const [showOrganizationPage, setShowOrganizationPage] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showCalendarView, setShowCalendarView] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const commandPalette = useCommandPalette();
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newTagName, setNewTagName] = useState('');
 
@@ -537,6 +583,92 @@ function App() {
   if (showOrganizationPage) {
     return <OrganizationPage onClose={() => setShowOrganizationPage(false)} />;
   }
+
+  // Show calendar view if toggled
+  if (showCalendarView) {
+    return (
+      <CalendarView
+        onClose={() => setShowCalendarView(false)}
+        onTaskClick={(task) => {
+          setShowCalendarView(false);
+          openTaskDetail(task.id);
+        }}
+      />
+    );
+  }
+
+  // Show dashboard if toggled
+  if (showDashboard) {
+    return (
+      <Dashboard
+        onClose={() => setShowDashboard(false)}
+      />
+    );
+  }
+
+  // Bulk Actions Handlers
+  const toggleTaskSelection = (taskId: string) => {
+    setSelectedTaskIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllTasks = () => {
+    const pendingTaskIds = tasks.filter(t => t.status === 'pending').map(t => t.id);
+    setSelectedTaskIds(new Set(pendingTaskIds));
+  };
+
+  const selectNoneTasks = () => {
+    setSelectedTaskIds(new Set());
+  };
+
+  const bulkDeleteTasks = async () => {
+    const toDelete = Array.from(selectedTaskIds);
+    for (const id of toDelete) {
+      await deleteTask(id);
+    }
+    toast.success(`Deleted ${toDelete.length} task${toDelete.length !== 1 ? 's' : ''}`);
+    setSelectedTaskIds(new Set());
+    setBulkSelectMode(false);
+  };
+
+  const bulkToggleStatus = async () => {
+    const toToggle = Array.from(selectedTaskIds);
+    const hasCompleted = toToggle.some(id => {
+      const task = tasks.find(t => t.id === id);
+      return task?.status === 'completed';
+    });
+
+    for (const id of toToggle) {
+      await toggleTaskStatus(id);
+    }
+
+    const message = hasCompleted
+      ? `Marked ${toToggle.length} task${toToggle.length !== 1 ? 's' : ''} as pending`
+      : `Completed ${toToggle.length} task${toToggle.length !== 1 ? 's' : ''}`;
+    toast.success(message);
+    setSelectedTaskIds(new Set());
+    setBulkSelectMode(false);
+  };
+
+  const bulkMoveToProject = async (projectId: string | null) => {
+    const toMove = Array.from(selectedTaskIds);
+    for (const id of toMove) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        await updateTask(id, { projectId });
+      }
+    }
+    const projectName = projectId ? projects.find(p => p.id === projectId)?.name : 'No Project';
+    toast.success(`Moved ${toMove.length} task${toMove.length !== 1 ? 's' : ''} to ${projectName}`);
+    setSelectedTaskIds(new Set());
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const task = tasks.find((t) => t.id === event.active.id);
@@ -688,7 +820,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-zinc-50 overflow-hidden font-sans selection:bg-orange-100 selection:text-orange-900">
+    <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900 overflow-hidden font-sans selection:bg-orange-100 selection:text-orange-900 dark:selection:bg-orange-900/30 dark:selection:text-orange-300">
 
       <Toaster
         position="bottom-center"
@@ -699,12 +831,23 @@ function App() {
         }}
       />
 
+      {/* Command Palette - Cmd+K */}
+      <CommandPalette
+        isOpen={commandPalette.isOpen}
+        onClose={commandPalette.close}
+        onNewTask={openNewTask}
+        onOpenCalendar={() => setShowCalendarView(true)}
+        onOpenSettings={() => useUIStore.getState().openSettingsModal()}
+        onOpenLeaderboard={openLeaderboard}
+      />
+
       {/* Staggered Menu - Premium Navigation Overlay */}
       <StaggeredMenu
         position="right"
         items={[
           { label: 'All Tasks', ariaLabel: 'View all tasks', link: '#', onClick: () => { setPriority(null); setProjectId(null); setShowAssignedToMe(false); } },
           { label: 'My Tasks', ariaLabel: 'View tasks assigned to me', link: '#', onClick: () => setShowAssignedToMe(true) },
+          { label: 'Calendar', ariaLabel: 'View calendar', link: '#', onClick: () => setShowCalendarView(true) },
           { label: 'Leaderboard', ariaLabel: 'View leaderboard', link: '#', onClick: () => openLeaderboard() },
           { label: 'Organization', ariaLabel: 'My organization', link: '#', onClick: () => setShowOrganizationPage(true) },
           { label: 'Settings', ariaLabel: 'Account settings', link: '#', onClick: () => { const { openSettingsModal } = useUIStore.getState(); openSettingsModal(); } },
@@ -714,62 +857,82 @@ function App() {
         socialItems={[]}
         displaySocials={false}
         displayItemNumbering={true}
-        menuButtonColor="#18181b"
-        openMenuButtonColor="#18181b"
+        menuButtonColor={isDark ? '#ffffff' : '#18181b'}
+        openMenuButtonColor={isDark ? '#ffffff' : '#18181b'}
         changeMenuColorOnOpen={false}
-        colors={['#fef3c7', '#fed7aa']}
+        colors={isDark ? ['#27272a', '#3f3f46'] : ['#fef3c7', '#fed7aa']}
         logoUrl="/Logo.avif"
         accentColor="#f97316"
       />
 
       {/* MAIN CONTENT AREA - FULL WIDTH PREMIUM DESIGN */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-white">
-        {/* Premium Header - Matching StaggeredMenu Typography */}
-        <header className="px-12 pt-24 pb-8 z-40 bg-white sticky top-0">
-          <div className="flex items-end justify-between">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-white dark:bg-zinc-900">
+        {/* Premium Header - Responsive */}
+        <header className="px-4 sm:px-6 md:px-12 pt-16 sm:pt-20 md:pt-24 pb-4 sm:pb-6 md:pb-8 z-40 bg-white dark:bg-zinc-900 sticky top-0">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-zinc-400 uppercase tracking-widest mb-2">
+              <p className="text-xs sm:text-sm font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1 sm:mb-2">
                 {(() => {
                   const today = new Date();
                   return today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                 })()}
               </p>
-              <h1 className="text-6xl font-bold text-zinc-900 uppercase tracking-tight leading-none">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight leading-none">
                 Hello<span className="text-orange-500">,</span>
                 <br />
                 <span className="text-orange-500">{profile?.name?.split(' ')[0]}</span>
               </h1>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="relative group">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <div className="relative group flex-1 sm:flex-none">
                 <input
                   type="text"
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 px-6 py-4 bg-zinc-50 border-0 text-base font-medium text-zinc-900 placeholder:text-zinc-400 focus:ring-2 focus:ring-orange-500/30 transition-all outline-none"
+                  className="w-full sm:w-48 md:w-64 px-4 sm:px-6 py-3 sm:py-4 bg-zinc-50 dark:bg-zinc-800 border-0 text-sm sm:text-base font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-2 focus:ring-orange-500/30 transition-all outline-none"
                 />
               </div>
+              {/* Bulk Select Toggle */}
+              <button
+                onClick={() => {
+                  setBulkSelectMode(!bulkSelectMode);
+                  if (bulkSelectMode) {
+                    setSelectedTaskIds(new Set());
+                  }
+                }}
+                className={`h-10 sm:h-12 md:h-14 px-3 sm:px-4 md:px-6 font-bold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center gap-1 sm:gap-2 ${bulkSelectMode
+                  ? 'bg-orange-500 text-white'
+                  : isDark
+                    ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                  }`}
+              >
+                <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <span className="hidden sm:inline">{bulkSelectMode ? 'Cancel' : 'Select'}</span>
+              </button>
               <button
                 onClick={openNewTask}
-                className="h-14 px-8 bg-zinc-900 text-white font-bold text-sm uppercase tracking-wider hover:bg-orange-500 active:scale-95 transition-all flex items-center gap-3"
+                className="h-10 sm:h-12 md:h-14 px-4 sm:px-6 md:px-8 bg-zinc-900 dark:bg-orange-500 text-white font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-orange-500 dark:hover:bg-orange-600 active:scale-95 transition-all flex items-center gap-2 sm:gap-3"
               >
                 <Icons.Plus />
-                <span>New Task</span>
+                <span className="hidden sm:inline">New Task</span>
               </button>
             </div>
           </div>
         </header>
 
-        {/* Projects Filter Bar */}
-        <div className="px-12 py-4 border-b border-zinc-100 bg-white sticky top-[176px] z-30">
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 custom-scrollbar">
-            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest mr-2 flex-shrink-0">Projects:</span>
+        {/* Projects Filter Bar - Responsive */}
+        <div className="px-4 sm:px-6 md:px-12 py-3 sm:py-4 border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-[120px] sm:top-[150px] md:top-[176px] z-30">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 custom-scrollbar">
+            <span className="text-[10px] sm:text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mr-1 sm:mr-2 flex-shrink-0">Projects:</span>
             <button
               onClick={() => setProjectId(null)}
-              className={`px-4 py-2 text-sm font-bold transition-all flex-shrink-0 ${!projectId
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold transition-all flex-shrink-0 ${!projectId
                 ? 'bg-orange-500 text-white'
-                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                 }`}
             >
               All
@@ -779,8 +942,8 @@ function App() {
                 <button
                   onClick={() => setProjectId(project.id)}
                   className={`px-4 py-2 text-sm font-bold transition-all flex items-center gap-2 ${projectId === project.id
-                    ? 'bg-zinc-900 text-white'
-                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                    ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                     }`}
                 >
                   <span
@@ -878,8 +1041,8 @@ function App() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-x-auto overflow-y-hidden px-8 pb-8 custom-scrollbar">
-          <div className="h-full flex gap-8 min-w-max pb-4">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden px-2 sm:px-4 md:px-8 pb-4 sm:pb-6 md:pb-8 custom-scrollbar">
+          <div className="h-full flex flex-col sm:flex-row gap-4 sm:gap-6 md:gap-8 sm:min-w-max pb-4">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCorners}
@@ -899,6 +1062,9 @@ function App() {
                       onClick={() => openTaskDetail(task.id)}
                       projects={projects}
                       tags={tags}
+                      isSelected={selectedTaskIds.has(task.id)}
+                      onSelect={() => toggleTaskSelection(task.id)}
+                      bulkSelectMode={bulkSelectMode}
                     />
                   ))}
                 </SortableContext>
@@ -916,6 +1082,9 @@ function App() {
                       onClick={() => openTaskDetail(task.id)}
                       projects={projects}
                       tags={tags}
+                      isSelected={selectedTaskIds.has(task.id)}
+                      onSelect={() => toggleTaskSelection(task.id)}
+                      bulkSelectMode={bulkSelectMode}
                     />
                   ))}
                 </SortableContext>
@@ -1043,6 +1212,27 @@ function App() {
       {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
       <LeaderboardModal />
       {showOrganizationPage && <OrganizationPage onClose={() => setShowOrganizationPage(false)} />}
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedTaskIds.size}
+        totalCount={tasks.length}
+        onSelectAll={selectAllTasks}
+        onSelectNone={selectNoneTasks}
+        onDelete={bulkDeleteTasks}
+        onToggleStatus={bulkToggleStatus}
+        hasCompletedSelected={Array.from(selectedTaskIds).some(id => {
+          const task = tasks.find(t => t.id === id);
+          return task?.status === 'completed';
+        })}
+        onClose={() => {
+          setSelectedTaskIds(new Set());
+          setBulkSelectMode(false);
+        }}
+      />
+
+      {/* Pomodoro Timer - Floating Widget */}
+      <PomodoroTimer />
 
       {/* Settings Modal */}
       <SettingsModal />

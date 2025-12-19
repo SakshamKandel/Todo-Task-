@@ -44,7 +44,19 @@ export function ChangePasswordModal({
 
         try {
             if (isAdminMode && isSuperAdmin) {
-                toast.error('Admin password change requires server-side setup. Please use password reset email instead.');
+                // For admin mode, send a password reset email
+                // Direct password update requires Supabase Edge Functions with service_role key
+                const { error } = await supabase.auth.resetPasswordForEmail(targetUserEmail || '', {
+                    redirectTo: `${window.location.origin}/reset-password`,
+                });
+
+                if (error) throw error;
+
+                toast.success(`Password reset email sent to ${targetUserEmail}!`, {
+                    duration: 5000,
+                    icon: '📧'
+                });
+                handleClose();
             } else {
                 if (!currentPassword) {
                     toast.error('Please enter your current password');
@@ -171,8 +183,8 @@ export function ChangePasswordModal({
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className={`w-full px-4 py-3 bg-white border-l-4 border-y-0 border-r-0 text-zinc-900 font-medium focus:outline-none transition-colors ${newPassword && confirmPassword && newPassword !== confirmPassword
-                                    ? 'border-l-red-500'
-                                    : 'border-l-zinc-300 focus:border-l-orange-500'
+                                ? 'border-l-red-500'
+                                : 'border-l-zinc-300 focus:border-l-orange-500'
                                 }`}
                             placeholder="Confirm new password"
                             required

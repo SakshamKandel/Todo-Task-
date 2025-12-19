@@ -241,19 +241,19 @@ export default function OrganizationPage({ onClose }: OrganizationPageProps) {
 
     return (
         <div className="fixed inset-0 bg-white z-[9998] overflow-auto">
-            {/* Premium Header */}
+            {/* Premium Header - Responsive */}
             <div className="bg-white border-b border-zinc-100 sticky top-0 z-10">
-                <div className="max-w-6xl mx-auto px-8 py-6">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-[11px] font-bold uppercase tracking-widest text-orange-500 mb-1">My</p>
-                            <h1 className="text-4xl font-bold text-zinc-900 uppercase tracking-tight">Organization</h1>
+                            <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-orange-500 mb-0.5 sm:mb-1">My</p>
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-zinc-900 uppercase tracking-tight">Organization</h1>
                         </div>
                         <button
                             onClick={onClose}
-                            className="w-12 h-12 flex items-center justify-center bg-zinc-100 text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-zinc-100 text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -261,26 +261,26 @@ export default function OrganizationPage({ onClose }: OrganizationPageProps) {
                 </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-8 py-8">
-                {/* Join Team Section */}
-                <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-200">
-                    <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
+                {/* Join Team Section - Responsive */}
+                <div className="bg-white rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 border border-gray-200">
+                    <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
                         <Icons.Link />
                         Join a Team
                     </h2>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                         <input
                             type="text"
                             value={joinCode}
                             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                            placeholder="Enter invitation code (e.g., ABC123)"
-                            className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center uppercase tracking-widest font-mono text-lg"
+                            placeholder="Enter code (e.g., ABC123)"
+                            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center uppercase tracking-widest font-mono text-base sm:text-lg"
                             maxLength={8}
                         />
                         <button
                             onClick={handleJoinTeam}
                             disabled={!joinCode.trim() || joiningTeam}
-                            className="px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-5 sm:px-6 py-2.5 sm:py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {joiningTeam ? (
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -295,7 +295,7 @@ export default function OrganizationPage({ onClose }: OrganizationPageProps) {
                 </div>
 
                 {/* My Teams */}
-                <h2 className="text-lg font-bold text-gray-800 mb-4">My Teams ({myTeams.length})</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">My Teams ({myTeams.length})</h2>
 
                 {loading ? (
                     <div className="flex justify-center py-12">
@@ -310,29 +310,29 @@ export default function OrganizationPage({ onClose }: OrganizationPageProps) {
                         <p className="text-zinc-500 mb-4">Join a team using an invitation code or ask an admin to add you.</p>
                     </div>
                 ) : (
-                    <div className="space-y-6">
+                    <div className="space-y-4 sm:space-y-6">
                         {myTeams.map((team) => (
                             <div key={team.id} className="bg-white border border-zinc-200 overflow-hidden">
-                                {/* Team Header */}
-                                <div className="p-6 border-b border-zinc-100 bg-zinc-50">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 bg-orange-500 flex items-center justify-center text-white text-xl font-bold">
+                                {/* Team Header - Responsive */}
+                                <div className="p-4 sm:p-6 border-b border-zinc-100 bg-zinc-50">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3 sm:gap-4">
+                                            <div className="w-10 h-10 sm:w-14 sm:h-14 bg-orange-500 flex items-center justify-center text-white text-base sm:text-xl font-bold flex-shrink-0">
                                                 {team.name.charAt(0).toUpperCase()}
                                             </div>
-                                            <div>
-                                                <h3 className="text-xl font-bold text-zinc-900">{team.name}</h3>
+                                            <div className="min-w-0">
+                                                <h3 className="text-base sm:text-xl font-bold text-zinc-900 truncate">{team.name}</h3>
                                                 {team.institution && (
-                                                    <p className="text-sm text-zinc-500">{team.institution}</p>
+                                                    <p className="text-xs sm:text-sm text-zinc-500 truncate">{team.institution}</p>
                                                 )}
-                                                <p className="text-sm text-orange-500 font-bold">
+                                                <p className="text-xs sm:text-sm text-orange-500 font-bold">
                                                     {team.members?.length || 0} members
                                                 </p>
                                             </div>
                                         </div>
                                         <button
                                             onClick={() => handleLeaveTeam(team.id)}
-                                            className="w-10 h-10 flex items-center justify-center bg-zinc-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-zinc-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
                                             title="Leave team"
                                         >
                                             <Icons.Exit />
@@ -341,24 +341,24 @@ export default function OrganizationPage({ onClose }: OrganizationPageProps) {
 
                                     {/* Invitation Code (Admin only) */}
                                     {(isRole('superadmin') || isRole('admin')) && (
-                                        <div className="mt-4 p-4 bg-white border-l-4 border-l-orange-500">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Invitation Code</span>
+                                        <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white border-l-4 border-l-orange-500">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                                                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-zinc-500">Invitation Code</span>
                                                 {invitations[team.id] ? (
                                                     <div className="flex items-center gap-2">
-                                                        <code className="px-4 py-2 bg-zinc-100 font-mono text-lg tracking-widest">
+                                                        <code className="px-3 sm:px-4 py-1.5 sm:py-2 bg-zinc-100 font-mono text-sm sm:text-lg tracking-widest">
                                                             {invitations[team.id].code}
                                                         </code>
                                                         <button
                                                             onClick={() => copyInviteCode(invitations[team.id].code)}
-                                                            className="w-10 h-10 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 transition-colors"
+                                                            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 transition-colors"
                                                             title="Copy code"
                                                         >
                                                             <Icons.Copy />
                                                         </button>
                                                         <button
                                                             onClick={() => copyInviteLink(invitations[team.id].code)}
-                                                            className="w-10 h-10 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 transition-colors"
+                                                            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 transition-colors"
                                                             title="Copy invite link"
                                                         >
                                                             <Icons.Link />
@@ -368,7 +368,7 @@ export default function OrganizationPage({ onClose }: OrganizationPageProps) {
                                                     <button
                                                         onClick={() => generateInviteCode(team.id)}
                                                         disabled={generatingCode === team.id}
-                                                        className="px-4 py-2 bg-zinc-900 text-white text-sm font-bold uppercase tracking-wider hover:bg-orange-500 transition-colors disabled:opacity-50"
+                                                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 text-white text-xs sm:text-sm font-bold uppercase tracking-wider hover:bg-orange-500 transition-colors disabled:opacity-50"
                                                     >
                                                         {generatingCode === team.id ? 'Generating...' : 'Generate Code'}
                                                     </button>
@@ -385,7 +385,8 @@ export default function OrganizationPage({ onClose }: OrganizationPageProps) {
                                         {team.members?.map((member) => {
                                             const myMembership = team.members?.find(m => m.user_id === user?.id);
                                             const isLeader = myMembership?.role === 'leader';
-                                            const canDelete = (isLeader || isRole('superadmin') || isRole('admin')) && member.user_id !== user?.id;
+                                            // Only team leaders can remove members (not admins/superadmins)
+                                            const canDelete = isLeader && member.user_id !== user?.id;
 
                                             const handleRemoveMember = async () => {
                                                 if (!confirm(`Remove ${member.profile?.name} from this team?`)) return;
